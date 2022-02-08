@@ -43,8 +43,6 @@ typedef unsigned long __fd_mask;
 #define __FD_CLR(d, set)   ((void)(__FDS_BITS(set)[__FD_ELT(d)] &= ~__FD_MASK(d)))
 #define __FD_ISSET(d, set) ((__FDS_BITS(set)[__FD_ELT(d)] & __FD_MASK(d)) != 0)
 
-#define POLL_NOTIMEOUT ((uint64_t)-1)
-
 static long _shim_do_poll(struct pollfd* fds, nfds_t nfds, uint64_t* timeout_us) {
     if ((uint64_t)nfds > get_rlimit_cur(RLIMIT_NOFILE))
         return -EINVAL;
@@ -205,7 +203,7 @@ long shim_do_poll(struct pollfd* fds, unsigned int nfds, int timeout_ms) {
         return -EFAULT;
 
     uint64_t timeout_us = (unsigned int)timeout_ms * TIME_US_IN_MS;
-    return _shim_do_poll(fds, nfds, timeout_ms == -1 ? NULL : &timeout_us);
+    return _shim_do_poll(fds, nfds, timeout_ms < 0 ? NULL : &timeout_us);
 }
 
 long shim_do_ppoll(struct pollfd* fds, unsigned int nfds, struct timespec* tsp,

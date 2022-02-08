@@ -21,7 +21,7 @@
 int _DkStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags_t* events,
                          pal_wait_flags_t* ret_events, uint64_t* timeout_us) {
     int ret;
-    uint64_t remaining_time = timeout_us ? *timeout_us : 0;
+    uint64_t remaining_time_us = timeout_us ? *timeout_us : 0;
 
     if (count == 0)
         return 0;
@@ -95,7 +95,7 @@ int _DkStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags_
             /* We might have slept a bit too long. */
             diff = 0;
         }
-        remaining_time = (uint64_t)diff / TIME_NS_IN_US;
+        remaining_time_us = (uint64_t)diff / TIME_NS_IN_US;
     }
 
     if (ret < 0) {
@@ -136,7 +136,7 @@ int _DkStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags_
 
 out:
     if (timeout_us) {
-        *timeout_us = remaining_time;
+        *timeout_us = remaining_time_us;
     }
     free(fds);
     free(offsets);
