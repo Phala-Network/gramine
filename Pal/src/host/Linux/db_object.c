@@ -71,7 +71,7 @@ int _DkStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags_
     if (ret < 0) {
         ret = unix_to_pal_error(ret);
         goto out;
-    } else if (!ret) {
+    } else if (ret == 0) {
         /* timed out */
         ret = -PAL_ERROR_TRYAGAIN;
         goto out;
