@@ -3,14 +3,15 @@ Onboarding
 
 .. highlight:: sh
 
-.. see Documentation/howto-doc.rst about |nbsp| versus |~|
-.. |nbsp| unicode:: 0xa0
-   :trim:
+This page describes the knowledge needed to efficiently contribute high-quality
+PRs to the Gramine project. This page also describes typical flows that Gramine
+developers should follow to make the process of PR review pleasant to everyone
+involved.
 
-This page describes the pre-requisite knowledge needed to efficiently contribute
-high-quality PRs to the Gramine project. This page also describes typical flows
-that Gramine developers should follow to make the process of PR review pleasant
-to everyone involved.
+The Gramine community values quality above all. Therefore, the authors should
+take their time to create a good PR, even if this means contributing less
+patches. Bear in mind that Gramine is a security-related project and needs a
+very careful development process.
 
 This page is intended to be a Getting Started guide for new Gramine developers,
 *not* a reference manual on exact rules for contributing to Gramine. For the
@@ -20,14 +21,14 @@ Pre-requisite knowledge
 -----------------------
 
 Gramine is a Library OS that emulates the Linux kernel. Think of Gramine as a
-tiny Linux re-implementation. As one example, Gramine has its own
+tiny Linux re-implementation in userspace. As one example, Gramine has its own
 implementations of Linux system calls. As another example, Gramine implements
 its own ``/proc/`` file system.
 
 Moreover, Gramine with the Intel SGX backend also emulates/validates some CPU
-features. For example, Gramine-SGX verifies the return values of the CPUID
-instruction. As another example, Gramine-SGX verifies the sanity of the CPU/NUMA
-topology.
+features. For example, Gramine with SGX verifies the return values of the CPUID
+instruction. As another example, Gramine with SGX verifies the consistency of
+the CPU/NUMA topology.
 
 Finally, Gramine is a standalone, "nostdlib" software. This means that Gramine
 itself doesn't link against any standard libraries and cannot rely on common
@@ -49,15 +50,19 @@ programming. We recommend the following books and resources:
 
 - Programming for the Linux kernel
 
+  - "The Linux Programming Interface" by M. Kerrisk
   - "Linux Kernel Development" by R. Love
   - "Linux System Programming" by R. Love
   - The Linux Kernel documentation itself, see
     https://www.kernel.org/doc/html/latest/ and especially
     https://www.kernel.org/doc/html/latest/process/howto.html
-  - The Linux source code itself, you can use https://elixir.bootlin.com/ to
-    browse it
+  - The Linux source code itself, you can use https://elixir.bootlin.com/ or
+    https://code.woboq.org/linux/linux/ to browse it
   - Man pages, type ``man man`` in your Linux terminal for reference or visit
-    https://man7.org/linux/man-pages/
+    https://man7.org/linux/man-pages/. Disclaimer: most man pages describe the
+    semantics of the libc wrappers around syscalls, not the syscalls themselves
+    (sometimes man pages have brief notes on semantics of the Linux syscalls
+    under NOTES and BUGS).
 
 - Hardware architecture (especially for Gramine-SGX development)
 
@@ -65,56 +70,35 @@ programming. We recommend the following books and resources:
     Hennessy
   - "Structured Computer Organization" by A. Tanenbaum
   - The latest revision of "Intel 64 and IA-32 Architectures Software
-    Developer’s Manual, combined volumes"
+    Developer’s Manual", you can download it from
+    https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html
 
-A Gramine developer is also expected to be proficient in the following OS kernel
-subsystems in particular:
+To meaningfully contribute to Gramine, the developer is expected to have a
+decent level of understanding of the concepts involved in any given subsystem of
+Gramine. For example, to contribute a patch/feature to Gramine's file system,
+the developer is expected to have the Linux/Unix specific knowledge of dentries,
+inodes, mount points. The Gramine subsystems (modelled after the Linux kernel)
+include:
 
-- Virtual memory management (in particular, Virtual Memory Areas, or VMAs)
+- Virtual memory management (with the concept of Virtual Memory Areas, or VMAs)
 
-- File systems internals
+- File systems (with concepts of Virtual File Systems, dentries, inodes, mount
+  points, chroot, tmpfs, sysfs, devfs, mandatory locks, advisory locks)
 
-  - Virtual File System concept
-  - Dentries vs inodes
-  - Mount points and chroot
-  - File locking (mandatory locks, advisory locks)
-  - Pseudo file systems (``/proc``, ``/sys``, ``/dev``)
+- Thread management (futexes and events)
 
-- Thread management
+- Process management (fork, execve, copy-on-write semantics)
 
-  - Multi-threading
-  - Concurrent programming, synchronization and data races, locks and lockless
-    algorithms
-  - Futexes
+- Signal handling (synchronous and asynchronous signals)
 
-- Process management
+- Communication primitives (Inter-Process Communication, pipes, named pipes,
+  sockets, IO multiplexing, eventfd)
 
-  - Multi-processing
-  - Fork and copy-on-write semantics
-  - Execve
+- ELF binary loading (symbol relocation & resolution)
 
-- Signal handling
-
-  - Synchronous signals (traps, exceptions)
-  - Asynchronous signals (interrupts)
-
-- Communication primitives
-
-  - Inter-Process Communication (IPC)
-  - eventfd
-  - Pipes
-  - Named pipes (FIFOs)
-  - Sockets (network sockets, UNIX domain sockets, raw NETLINK sockets)
-  - IO multiplexing (select, poll, epoll)
-
-- ELF binary loading and symbol relocation & resolution
-
-  - ELF file format, see https://refspecs.linuxfoundation.org/elf/elf.pdf
-  - ELF details, see
-    https://www.intezer.com/blog/research/executable-linkable-format-101-part1-sections-segments/
-    and follow-up posts
-  - ELF linking and loading, see
-    https://eli.thegreenplace.net/tag/linkers-and-loaders
+The Gramine developer is expected to be skilled in concurrent programming
+(synchronization primitives, data races, locking, lockless algorithms). Gramine
+codebase mostly uses fine-grained locks and (rarely) atomic variables.
 
 Finally, a Gramine developer is also expected to be proficient in the software
 development tools and flows adopted by the Gramine community:
@@ -154,9 +138,9 @@ development tools and flows adopted by the Gramine community:
 
 The above list with pre-requisite knowledge may be overwhelming at first.
 Indeed, Gramine developers are expected to have solid systems programming
-background and deep UNIX systems knowledge. We highly encourage to read several
-books on Linux kernel development and OS concepts, as well as get comfortable
-with git and GDB tools.
+background and good Linux/Unix systems knowledge. We highly encourage to read
+several books on Linux kernel development and OS concepts, as well as to get
+comfortable with git and GDB.
 
 Debugging with GDB
 ------------------
@@ -164,13 +148,15 @@ Debugging with GDB
 We highly recommend to debug your applications and Gramine with classic GDB
 debugger. Gramine has comprehensive support for GDB, both in direct mode and in
 SGX mode. Please see :doc:`debugging` for information on how to build Gramine
-with GDB and start Gramine under GDB.
+with debugging support and how to start Gramine under GDB.
 
 GDB is a powerful tool, but it comes with its own quirks. Mastering GDB may take
 time, but it pays off handsomely. Below we give some general advices for using
 GDB to debug Gramine:
 
-- For better debugging experience, we recommend to use GDB's TUI::
+- Some developers prefer GDB's TUI (Text User Interface) over the classic CUI
+  (Command User Interface). Both are not perfect, but here are some hints if you
+  want to switch to TUI::
 
       $ (gdb) layout split
       ... now there are three panes: source code, asm and cmds
@@ -179,8 +165,9 @@ GDB to debug Gramine:
   switch between different layouts: ``layout src``, ``layout asm``, ``layout
   regs``. At any time, you can change focus to any of the panes: ``focus cmd``,
   ``focus src``, ``focus asm``, ``focus regs`` -- this is useful when you want
-  to scroll up/down or look at the history of GDB commands. Also, whenever GDB's
-  TUI output gets "mangled", type ``refresh``.
+  to scroll up/down or look at the history of GDB commands. Alternatively, to
+  switch to a next pane, hit ``Ctrl-x + o``. Also, whenever GDB's TUI output
+  gets "mangled", type ``refresh`` or hit ``Ctrl + L``.
 
 - For better debugging experience of multi-threaded applications, use ``set
   scheduler-locking on`` whenever you want to step through a single thread (GDB
@@ -194,6 +181,13 @@ GDB to debug Gramine:
   "forget about" (detach from) the parent/child process. To check the state of
   other processes (inferiors in GDB parlance), switch between them via
   ``inferior 1`` or (between processes + threads) ``thread 1.1``.
+
+  When started under GDB, Gramine defaults to the following options::
+
+      set detach-on-fork off              # follow both parent and child
+      set schedule-multiple on            # resume all processes after stop
+      handle SIGCONT pass noprint nostop  # silence SIGCONT signals
+      set disable-randomization off       # run with ASLR enabled
 
 - We highly recommend to get acquainted with different ways of stepping through
   code in GDB. Apart from the classic ``continue``, ``step`` and ``next``, we
@@ -210,11 +204,6 @@ Also, pay attention to Gramine-SGX quirks when debugged under GDB:
   instruction (which performs ERESUME), and GDB will continue at the correct
   in-enclave code.
 
-- Currently, when executing in-enclave code, GDB correctly shows values only in
-  General Purposes Registers (GPRs) like ``eax``, ``rip``, etc. Special-purpose
-  registers like ``xmm0``, ``fs``/``gs``, ``bnd1`` will show *incorrect*
-  values.
-
 Typical Gramine development flows
 ---------------------------------
 
@@ -223,6 +212,10 @@ terminal sessions and GDB debugging sessions.
 
 Fixing a bug
 ^^^^^^^^^^^^
+
+(This section describes a hypothetical bug that happens in Gramine *with SGX*.
+Of course, bugs can happen in Gramine with other backends, but we concentrate on
+the SGX scenario as it is the most common and complicated one.)
 
 You may have encountered a genuine bug in Gramine, when your application runs
 fine on native Linux but fails under Gramine::
@@ -240,31 +233,32 @@ fine on native Linux but fails under Gramine::
      its documentation, read its source code, read its GitHub/GitLab/mailing
      list discussions (if available), ask app developers.
 
-   - If you experience the bug in Gramine-SGX, try Gramine in non-SGX mode::
+   - If you experience the bug in Gramine with SGX, try Gramine in non-SGX
+     mode::
 
          $ gramine-direct ./myapp
 
-     If the application runs fine with ``gramine-direct``, then you know that
-     the problem is in the SGX backend of Gramine (in other words, the problem
-     is somewhere in the Linux-SGX PAL).
+     If the bug is exposed with ``gramine-direct``, we recommend to debug it
+     first (it is simpler to debug ``gramine-direct`` rather than
+     ``gramine-sgx``).
 
    - Run Gramine with debug information: use ``loader.log_level = "all"`` in
      your Gramine manifest file, rebuild and restart the app under Gramine. You
      can save the log, either by specifying ``loader.log_file = "gramine.log"``
      or simply by redirecting the output of Gramine, e.g.::
 
+         # if you want to have app output and Gramine log mixed together
          $ gramine-sgx ./myapp 2>&1 | tee gramine.log
+         # if you want to have app output and Gramine log separated
+         $ gramine-sgx ./myapp 2>gramine.log
 
      Try to identify the system call in Gramine that goes wrong (e.g., returns
      an error code whereas it was supposed to finish successfully).
 
-   - Analyze the manifest file carefully. If you suspect a memory allocation
-     related bug or a buffer overrun bug, try to increase the following manifest
-     options: ``loader.pal_internal_mem_size``, ``sys.stack.size``,
-     ``sgx.enclave_size``. If at least one of the binaries spawned during app
-     execution is non-PIE, then set ``sgx.nonpie_binary = true``. If you suspect
-     problems with environment variables, see if it works with
-     ``loader.insecure__use_host_env = true``. If you observe that memory
+   - Analyze the manifest file carefully. If at least one of the binaries
+     spawned during app execution is non-PIE, then set ``sgx.nonpie_binary =
+     true``. If you suspect problems with environment variables, see if it works
+     with ``loader.insecure__use_host_env = true``. If you observe that memory
      addresses change constantly and hinder your debugging, set
      ``loader.insecure__disable_aslr = true``. But don't use the last two
      options in production; use them only for debugging and analysis!
@@ -314,7 +308,8 @@ fine on native Linux but fails under Gramine::
      Gramine source code to fix the bug. Follow our :doc:`coding-style` when
      modifying the code. Also, write your code in a "similar" way to how it is
      done in the files that you modify. Finally, try to find similar places in
-     Gramine code and follow their style.
+     Gramine code and follow their style (disclaimer: some parts of the Gramine
+     codebase are very old and do not follow our current style).
 
    - Ask yourself: is your bug fix generic enough, or does it only fix this
      particular instantiation of the bug? It is possible that your fix actually
@@ -331,12 +326,18 @@ fine on native Linux but fails under Gramine::
      read`` page in your Linux terminal (or read
      https://man7.org/linux/man-pages/man2/read.2.html if you prefer web pages).
      Pay attention to ``ERRORS``, ``NOTES`` and ``BUGS`` sections: they contain
-     information on Linux pecularities and subtle details.
+     information on Linux pecularities and subtle details. The ``C
+     library/kernel differences`` section (part of ``NOTES``) is also very
+     important to read. Disclaimer: man pages may contain errors and
+     understatements or skip some important details. Keep in mind that man pages
+     often describe generic Unix semantics and actual Linux behavior might
+     differ; the Linux kernel codebase is the ultimate source of truth.
 
    - Ask yourself: what does the Linux kernel do in this scenario? It may take
      some effort to find a relevant code snippet in the Linux sources, but
-     https://elixir.bootlin.com/ is a great place to analyze Linux internals.
-     For example, the ``read`` syscall implementation starts here:
+     https://elixir.bootlin.com/ and https://code.woboq.org/linux/linux/ are
+     great resources to analyze Linux internals.  For example, the ``read``
+     syscall implementation starts here:
      https://elixir.bootlin.com/linux/v5.14.14/source/fs/read_write.c#L642.
      Remember that in the end, the Linux kernel is the ultimate source of truth.
 
@@ -367,6 +368,9 @@ fine on native Linux but fails under Gramine::
      only manifest themselves after hours of execution or only in very specific
      environments.
 
+   - When adding a test (options 1-3 above), the author must ensure that the
+     test is failing before the fix and succeeding afterwards.
+
 #. Verify that your bug fix didn't break anything:
 
    - It is quite possible that your bug fix introduced another bug in Gramine,
@@ -376,30 +380,40 @@ fine on native Linux but fails under Gramine::
 
          # build and run PAL regression tests
          $ cd Pal/regression
-         $ make SGX=1 sgx-tokens -j
-         $ make regression
-         $ make regression SGX=1
+         $ gramine-test pytest -v
+         $ SGX=1 gramine-test pytest -v
 
          # build and run LibOS regression tests
          $ cd LibOS/shim/test/regression
-         $ make SGX=1 sgx-tokens -j
-         $ make regression
-         $ make regression SGX=1
+         $ gramine-test pytest -v
+         $ SGX=1 gramine-test pytest -v
 
          # build and run LibOS FS tests
          $ cd LibOS/shim/test/fs
-         $ make SGX=1 sgx-tokens -j
-         $ make test
-         $ make test SGX=1
+         $ gramine-test pytest -v
+         $ SGX=1 gramine-test pytest -v
 
          # build and run LTP tests (only in non-SGX mode)
-         $ cd LibOS/shim/test/fs
+         $ cd LibOS/shim/test/ltp
          $ make -j
          $ make regression
 
      Verify that **all tests** succeed. If at least one test fails, analyze and
-     debug this test. Modify your bug fix based on this analysis and **run the
-     whole test suite** again. Repeat this process until all tests succeed.
+     debug this test. A failing test might be a indicator of a faulty solution
+     and the author should think carefully whether it is just "a missing corner
+     case" or the fix needs to be redesigned/reworked.
+
+     Modify your bug fix based on this analysis and **run the whole test suite**
+     again. Repeat this process until all tests succeed. If the bug was
+     non-deterministic or the fix involved changes in the "concurrent parts" of
+     Gramine, we recommend to run the test suite multiple times (e.g., 10 times
+     in a row).
+
+     The author should test the bug fix under both debug and release builds of
+     Gramine. Some issues expose themselves only under one or the other build.
+
+     For more information on running tests, please check
+     :ref:`running_regression_tests`.
 
    - In addition to running the test suite, try several example applications in
      Gramine (at least two apps that seem relevant to your bug fix)::
@@ -418,12 +432,23 @@ fine on native Linux but fails under Gramine::
 
    - Git-commit your bug fix locally::
 
-         $ git checkout -b <your-name>/<your-branch-name>
+         $ git checkout -b <your-nick>/<your-branch-name>
          $ git add <Gramine files that you modified>
          $ git commit --signoff
          ... type the commit title and the commit body message ...
-         $ git diff HEAD^ HEAD  # double-check your commit!
-         $ git push --set-upstream origin <your-name>/<your-branch-name>
+         $ git show   # double-check your commit!
+         $ git push --set-upstream origin <your-nick>/<your-branch-name>
+
+     You should write a good git commit message. Please follow advice from
+     https://cbea.ms/git-commit/. You can also check existing commit messages in
+     Gramine. Note that the message title must be prepended with the sub-system
+     of Gramine this commit pertains to, e.g., ``[LibOS]`` if the commit changes
+     the LibOS code.
+
+     The commit body message must not include GitHub issue numbers or links: we
+     strive to make the Gramine repo self-contained and free of references to
+     GitHub. The commit body message may include previous-commit hashes (e.g.
+     "fixes a bug introduced in 3db1e28e27").
 
    - Create the corresponding PR on https://github.com/gramineproject/gramine.
      GitHub interface will notice that you pushed a new branch to the repository
@@ -442,22 +467,23 @@ fine on native Linux but fails under Gramine::
      Verify again that all the changes look correct, that you didn't
      accidentally add or delete some files, and that your code changes do not
      contain remnants from your debugging sessions. If you find some issues, use
-     git fixup commits to fix them and then check the PR again.
+     git fixup commits (see below) to fix them and then check the PR again.
 
 #. Wait for reviews from Gramine maintainers. **Always use Reviewable** to read
    review comments and to reply. **Do not use GitHub review interface**.
 
    - Depending on the complexity of your bug fix and the current load of
      maintainers, the first reviews may come in 1 to 14 days. Please keep in mind
-     that the review process is long and tedious. Take comfort in the fact that
-     in e.g. the Linux development process, patches may take several years to be
-     merged.
+     that the review process is long and tedious (as a relevant example, some
+     patches to Linux may take several years to be merged). The Gramine
+     community focuses on quality and security rather than speed of development,
+     and thorough reviews are an important part of this.
 
    - Be prepared to see quick reviews with "Please read the contributing guide"
      comments if you didn't do your due diligence. Reviewers are busy with other
-     tasks (reviewing is never an actual "job"), so they don't have time and
-     energy to copy-paste exerpts from documentation. Check the guides carefully
-     and fix the identified problems in your submission.
+     tasks, and unplanned/external PRs cannot take priority over the reviewers'
+     current work. Check the guides carefully and fix the identified problems in
+     your submission.
 
    - Remember that many typos and obvious mistakes in your PR lead to bad first
      impression. Prepare your first submission carefully and verify it a couple
@@ -472,7 +498,7 @@ fine on native Linux but fails under Gramine::
 
    - Fix/augment your code according to comments::
 
-         $ git checkout <your-name>/<your-branch-name>
+         $ git checkout <your-nick>/<your-branch-name>
          ... modify your code ...
 
      After you finished all your fixups, **run the whole test suite** and
@@ -483,7 +509,7 @@ fine on native Linux but fails under Gramine::
 
          $ git add <fixed/augmented files>
          $ git commit --signoff --fixup=<hash of your main commit>
-         $ git diff HEAD^ HEAD  # double-check your fixup commit
+         $ git show   # double-check your fixup commit
          $ git push
 
    - After you git-pushed the changes, open your PR's web page and go into
@@ -492,7 +518,7 @@ fine on native Linux but fails under Gramine::
      Take into account that reviewers only track changes in Reviewable comments;
      reviewers do not track new git commits in PRs!
 
-#. If some reviewers do not reply for a long time (4-5 days), ping them
+#. If some reviewers do not reply for a long time (5-7 days), ping them
    explicitly, either on GitHub or via our Gitter messaging system.
 
 #. Continue resolving reviewers' comments until all reviewers explicitly approve
@@ -506,8 +532,8 @@ fine on native Linux but fails under Gramine::
 The best way to learn about these flows and requirements on the bug fix PRs is
 to look at already-merged PR examples. Here are a few good examples:
 
+- https://github.com/gramineproject/gramine/pull/295
 - https://github.com/gramineproject/gramine/pull/165
-- https://github.com/gramineproject/gramine/pull/76
 - https://github.com/gramineproject/gramine/pull/35
 
 Please examine the history of discussions in this PRs, code revisions, and the
@@ -517,7 +543,7 @@ unfold all "resolved discussions" to read the comments.
 Implementing a new system call
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-You may have encountered a situation when your application depends on some
+You may have encountered a situation where your application depends on some
 system call that is not implemented in Gramine (recall that ``-38`` is the
 ``-ENOSYS`` error code, which means "syscall not implemented")::
 
@@ -563,14 +589,15 @@ system call that is not implemented in Gramine (recall that ``-38`` is the
      files, pipes, sockets, eventfd, etc. So the ``read`` syscall touches almost
      all components and file systems of Gramine.
 
-     If the system call requires to implement a whole new sub-system or a
-     component in Gramine, do **not** try to implement the system call
-     immediately. First discuss this with Gramine maintainers. Implementing such
-     a system call may be a very complex task, and you will need help and/or
-     guidance from other Gramine developers.
+#. Discuss the system call and your proposed implementation with Gramine
+   maintainers. Do **not** try to implement the system call immediately. You
+   will need explicit approvals from Gramine maintainers that it is indeed
+   desirable to implement the system call, and that your proposed implementation
+   is correct.
 
 #. Implement the system call in Gramine. If it is a family of related system
-   calls, implement all of them.
+   calls, try to implement all of them (but PRs with only partial support may be
+   also fine).
 
    - Implement the main emulation function ``shim_do_some_syscall()``. If the
      system call belongs to some family of already-implemented system calls, add
@@ -591,7 +618,9 @@ system call that is not implemented in Gramine (recall that ``-38`` is the
      supported host in PAL.
 
      Note that Gramine strives to keep the PAL API as small as possible. It is
-     highly discouraged to create new PAL functions without real need.
+     highly discouraged to create new PAL functions without real need. Do
+     **not** try to implement this immediately, instead discuss with Gramine
+     maintainers first.
 
    - You may find more information on syscall implementation in
      :doc:`new-syscall`.
@@ -602,14 +631,14 @@ system call that is not implemented in Gramine (recall that ``-38`` is the
 The rest steps are the same as in "Fixing a bug" section above. You need to
 verify your modifications by running all tests and several relevant
 applications. Then you publish your code on GitHub and wait for reviews. You
-continiously work with reviewers to refine your PR until all reviewers
+continuously work with reviewers to refine your PR until all reviewers
 explicitly approve the PR. After that, you wait for the PR to be merged and then
 you notify all concerned parties about this fact.
 
 Below are several good examples of adding a new system call:
 
+- https://github.com/gramineproject/gramine/pull/309
 - https://github.com/gramineproject/gramine/pull/146
-- https://github.com/gramineproject/graphene/pull/2500
 
 Adding new features
 ^^^^^^^^^^^^^^^^^^^
@@ -656,13 +685,13 @@ Below are several good examples of adding documentation in Gramine:
 Adding a new app example
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-If you enabled some new application in Gramine and believe it may be of use to
-others, you are encouraged to submit a PR with this app.
+If you successfully ran some new application in Gramine and believe it may be of
+use to others, you are encouraged to submit a PR with this app.
 
-You need to be aware of several pecularities:
+You need to be aware of several peculiarities:
 
 - Not all applications deserve to be in the list of curated examples in Gramine.
-  For example, if the application is just another Python script, and enabling it
+  For example, if the application is just another Python script, and running it
   in Gramine is trivial (by taking the already-existing Python example and
   slightly modifying its manifest file), then there is no sense in adding such
   an example.
@@ -682,7 +711,7 @@ sections -- you add the Makefile to download and/or build the application
 together with its manifest file locally, then git-commit and git-push them, then
 create a PR on GitHub and go through the review process. The obvious difference
 from other sections is that you do *not* need to run Gramine tests or other
-applications for verification -- enabling your application in Gramine cannot
+applications for verification -- running your application in Gramine cannot
 affect other tests/apps.
 
 Below are several good examples of adding new applications in Gramine (but note

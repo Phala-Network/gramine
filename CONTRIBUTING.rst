@@ -12,10 +12,10 @@ First off, thank you for your interest in contributing to Gramine!
 In general, code contributions should be submitted to the Gramine project
 using a |nbsp| `pull request <https://github.com/gramineproject/gramine/pulls>`__.
 
-To learn more about the pre-requisite knowledge required to start contributing
-to this project as well as some advice on contributing high-quality PRs, read
-through `the onboarding gude
-<https://gramine.rtfd.io/en/latest/devel/onboarding.html>`__.
+To learn more about the knowledge required to start contributing to this project
+as well as some advice on contributing high-quality PRs, read through `the
+onboarding guide
+<https://gramine.readthedocs.io/en/latest/devel/onboarding.html>`__.
 
 Reporting Bugs
 --------------
@@ -164,6 +164,8 @@ Style Guidelines
 ^^^^^^^^^^^^^^^^
 See `style guidelines
 <https://gramine.rtfd.io/en/latest/devel/coding-style.html>`__.
+
+.. _running_regression_tests:
 
 Running Regression Tests by Hand
 --------------------------------
