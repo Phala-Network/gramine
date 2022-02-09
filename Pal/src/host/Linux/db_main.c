@@ -308,7 +308,7 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
      * systems with 4-level paging, because stack is located at the highest available user space
      * address, which does not leave any space for VDSO to be mapped after the stack. Now on systems
      * with 5-level paging, stack is mapped at the exact same location, but highest available user
-     * space address is much greater, leaving space for VDSO and making the randomizatoin trigger.
+     * space address is much greater, leaving space for VDSO and making the randomization trigger.
      * Relevant code: https://elixir.bootlin.com/linux/v5.14/source/arch/x86/entry/vdso/vma.c#L312
      * If VDSO location was randomized, we wouldn't be able to use it due to seccomp filter, which
      * allows us to catch "syscall" instructions. See "db_exception.c" for more details.
