@@ -2,7 +2,10 @@
 
 import os
 import sys
+import subprocess
 from http.server import SimpleHTTPRequestHandler, HTTPServer
+
+BLENDER = '/blender/blender'
 
 
 class RenderingRequestHandler(SimpleHTTPRequestHandler):
@@ -13,6 +16,7 @@ class RenderingRequestHandler(SimpleHTTPRequestHandler):
 
     def do_PUT(self):
         input_dir = os.path.join('/data', 'scenes')
+        output_dir = os.path.join('/data', 'images')
         if not os.path.exists(input_dir):
             os.mkdir(input_dir)
 
@@ -27,12 +31,26 @@ class RenderingRequestHandler(SimpleHTTPRequestHandler):
         with open(fileapth, 'wb') as output_file:
             output_file.write(self.rfile.read(file_length))
 
+        print("file uploaded", flush=True)
+
+        blender = subprocess.Popen([BLENDER, '-b', fileapth,
+                          '-t', '4',
+                          '-F', 'PNG',
+                          '-o', os.path.join(output_dir, filename),
+                          '-f', '1'])
+        blender.wait()
+        print("render finished", flush=True)
+
         self.respond(201, 'Created', 'Saved "%s"\n' % filename)
 
 
 def main(argv):
     if len(argv) != 2:
         print(f'Usage: {argv[0]} <PORT>', file=sys.stderr)
+        return 1
+
+    if not os.path.exists(BLENDER):
+        print('Blender not found', file=sys.stderr)
         return 1
 
     port = int(argv[1])

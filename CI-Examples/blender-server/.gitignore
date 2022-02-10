@@ -4,3 +4,7 @@
 /server.PID
 /TEST_STDERR
 /TEST_STDOUT
+
+/blender.tar.xz
+/blender_dir/
+/run_dir/
